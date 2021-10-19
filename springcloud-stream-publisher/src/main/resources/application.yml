@@ -1,0 +1,39 @@
+server:
+  port: 8801
+spring:
+  application:
+    name: cloud-stream-provider
+  rabbitmq:
+    host: 192.168.152.131
+    port: 5672
+    virtual-host: /
+    username: guest
+    password: guest
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.152.131:8848
+        namespace: 764257e3-6593-4ea5-b10f-b818ce17aa5b
+    cloud:
+      stream:  # 实现关联绑定：source->[channel->binder->MQ](Queue)
+        rabbit: # 进行rabbit的相关绑定配置
+          bindings:
+            myOutput: # output的名字
+              producer: # 进行发布端各种配置
+                routing-key-expression: '''admin''' # 设置一个RoutingKey信息
+        binders: # Map<String, BinderProperties>  在此处配置要绑定的rabbitmq的服务信息,binder->MQ
+          myRabbitMQ: #表示定义的名称，用于binding整合
+            type: rabbit #消息组件类型
+            environment:  # Map<String, Object>
+              spring:
+                rabbitmp:
+                  host: ${spring.rabbitmq.host}
+                  port: ${spring.rabbitmq.port}
+                  virtual-host: ${spring.rabbitmq.virtual-host}
+                  username: ${spring.rabbitmq.username}
+                  password: ${spring.rabbitmq.password}
+        bindings: #服务的整合处理 Map<String, BindingProperties> channel->binder
+          output: #这个名字是一个通道的名称,要和相应的MessageChannel名称吻合
+            binder: output #设置要绑定的消息服务的具体设置
+            destination: stream-exchange #表示要使用的Exchange名称定义
+            content-type: application/json # 设置消息类型，默认json，本文要设置为“text/plain”

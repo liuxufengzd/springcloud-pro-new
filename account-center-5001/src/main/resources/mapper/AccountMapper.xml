@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.liu.code.accountcenter.mapper.AccountMapper">
+    <update id="balanceChange">
+        update t_account
+        set balance = balance - #{money}
+        where account = #{userName}
+    </update>
+</mapper>

@@ -1,0 +1,86 @@
+# 自动拉取的配置文件名格式: ${spring.application.name}-${spring.profile.active}.${file-extension}
+# 配置文件都保存在Nacos或数据库上而不是git，无需额外构建config server，所以Nacos的存在避免了注册中心和config server两个microservice的构建
+# 和系统相关的配置是无法动态更新的
+# 其他公用的配置可以使用order-center.yml单独配置
+# 除了同一个微服务的config管理，也可以添加不同微服务的公共config文件
+# 原理：使用MQ订阅了某主题，server端相当于publisher，微服务端相当于subscriber，以此实现自动刷新，该主题类似于Bus，连通所有订阅它的服务
+server:
+  port: 6001
+  servlet:
+    context-path: /order
+spring:
+  profiles:
+    active: dev
+  application:
+    name: order-center
+  zipkin:
+    base-url: http://192.168.152.131:9411
+  sleuth:
+    sampler:
+      probability: 1
+
+  cloud:
+    nacos:
+      config:
+        namespace: 764257e3-6593-4ea5-b10f-b818ce17aa5b
+        group: inbound
+        file-extension: yml
+        server-addr: 192.168.152.131:8848
+# 对于既不调用其他服务且无需被其他服务发现的微服务，可以不用注册，但一般会注册
+      # addr写nginx地址
+      discovery:
+        namespace: 764257e3-6593-4ea5-b10f-b818ce17aa5b
+        server-addr: 192.168.152.131:8848
+    sentinel:
+      transport:
+        # 配置Sentinel DashBoard地址
+        dashboard: 192.168.152.131:8080
+        # 应用与Sentinel dashboard交互的端口，应用本地会起一个该端口占用的HttpServer
+        # 比如 Sentinel 控制台添加了一个限流规则，会把规则数据 push 给这个 Http Server 接收，Http Server 再将规则注册到 Sentinel中
+        # 默认8719端口，假如端口被占用，依次+1，直到找到未被占用端口
+        port: 8719
+      # 实现规则在nacos的持久化
+      datasource:
+        flow:
+          nacos:
+            server-addr: 192.168.152.131:8848
+            namespace: 764257e3-6593-4ea5-b10f-b818ce17aa5b
+            groupId: sentinel-rule
+            dataId: order-center
+            data-typr: json
+            rule-type: flow
+    alibaba:
+      seata:
+        # Seata tx service group.default is ${spring.application.name}-fescar-service-group.
+        tx-service-group: oc-fescar-service-group
+
+
+# 打开feign对sentinel的支持，用于限流熔断降级，可以配置在配置中心
+feign:
+  sentinel:
+    enabled: true
+
+# 从nacos上拉取order-center.yml + order-center-dev.yml
+# order-center-dev.yml:
+#spring:
+#  datasource:
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/lxfeng?serverTimezone=UTC
+#    username: root
+#    password: lxf6206288
+#order:
+#  env: configuration -> dev
+#
+# order-center.yml:
+#mybatis:
+#  mapper-locations: classpath:mapper/*.xml
+#  type-aliases-package: com.liu.code.ordercenterconfig.entity
+#  configuration:
+#    map-underscore-to-camel-case: true
+#order:
+#  common: common-test
+
+
+
+
+

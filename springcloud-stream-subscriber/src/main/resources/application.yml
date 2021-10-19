@@ -1,0 +1,43 @@
+server:
+  port: 8901
+spring:
+  application:
+    name: cloud-stream-subscriber
+  rabbitmq:
+    host: 192.168.152.131
+    port: 5672
+    virtual-host: /
+    username: guest
+    password: guest
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.152.131:8848
+        namespace: 764257e3-6593-4ea5-b10f-b818ce17aa5b
+    stream:  # 实现关联绑定：[MQ->binder->Channel](Queue)->sink
+      rabbit: # 进行rabbit的相关绑定配置，默认exchange type=topic
+        bindings:
+          myInput: # input的名字
+            consumer: # 进行消费端各种配置
+              binding-routing-key: admin  # 设置一个RoutingKey信息
+      binders: # Map<String, BinderProperties>  在此处配置要绑定的rabbitmq的服务信息,MQ->binder
+        myRabbitMQ: #表示定义的名称，用于binding整合
+          type: rabbit #消息组件类型
+          environment:  # Map<String, Object>
+            spring:
+              rabbitmp:
+                host: ${spring.rabbitmq.host}
+                port: ${spring.rabbitmq.port}
+                virtual-host: ${spring.rabbitmq.virtual-host}
+                username: ${spring.rabbitmq.username}
+                password: ${spring.rabbitmq.password}
+      bindings: #服务的整合处理 binder->Map<String, BindingProperties> channel
+        input: #这个名字是一个通道的名称,这里固定，因为监听Sink.input
+          binder: myRabbitMQ #设置要绑定的消息服务的具体设置
+          destination: output #表示要使用的Exchange名称定义
+          content-type: application/json #设置消息类型，默认json，本文要设置为“text/plain”
+          group: myqueue # 如果不指定group，则会默认生成一个属于该微服务的非持久排他的queue，会造成重复消费问题（exchange会分发到所有queue）和消息丢失问题
+          # 同一个组（同一个queue）则会不重复消费发送到该queue的message
+          # 如果指定，则生成持久化的可共享queue,该queue的message只会给其中一个consumer消费(round-robin),且避免消息丢失
+
+

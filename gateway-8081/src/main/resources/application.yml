@@ -1,0 +1,48 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: cloud-gateway
+  zipkin:
+    base-url: http://192.168.152.131:9411
+  sleuth:
+    sampler:
+      probability: 1
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.152.131:8848
+        namespace: 764257e3-6593-4ea5-b10f-b818ce17aa5b
+    gateway:
+      routes: # 路由：每条route试图匹配提供的uri(predicates)，断言true后根据服务名在注册中心得到相应的hostname(可负载均衡)，最后访问相应服务器的相应资源
+        - id: order-center
+          #uri: http://localhost:6001 为了实现动态路由，负载均衡，应该利用服务名寻找hostname, lb为负载均衡
+          uri: lb://order-center
+          predicates: #官方提供了11种断言, and 连接所有predicates
+            #- Path=/payment/find/**, /payment/port 可以写多个
+            - Path=/order/**
+        #            - Weight=group1,8
+        - id: account-center
+          uri: lb://account-center
+          predicates:
+            - Path=/account/**
+            # about the time that can be accessed
+            #            - After=2020-08-24T16:53:24.316+09:00[Asia/Tokyo]
+            #            - Before=2020-08-24T17:00:24.316+09:00[Asia/Tokyo]
+            #            - Between=2020-08-24T16:50:24.316+09:00[Asia/Tokyo],2020-08-24T16:59:24.316+09:00[Asia/Tokyo]
+
+            # about the request
+            #            - Cookie=chocolate, ch.p  #This route matches requests that have a cookie named chocolate whose value matches the ch.p regular expression.
+            #            - Header=X-Request-Id, \d+ #This route matches if the request has a header named X-Request-Id whose value matches the \d+ regular expression
+            #            - Host=**.somehost.org:${server.port},**.anotherhost.org:${server.port} # This route matches if the request accesses hostname with a value of ...
+            - Method=GET,POST # get or post is valid
+      #            - Query=name,liu # The preceding route matches if the request contained a name query parameter which matches liu.
+      #            - RemoteAddr=192.168.1.1/24 # This route matches if the remote address of the request was, for example, 192.168.1.10.
+      #            - Weight=group1,2 #This route would forward ~80% of traffic to CLOUD-PAYMENT-SERVICE and ~20% of traffic to CLOUD-PAYMENT-SERVICE
+      #          filters:  # 自带很多绑定单个route的filter，但一般还是自定义全局filter使用更加灵活
+      #            - AddRequestParameter=foo, bar-{segment}
+      # 开启动态路由,便于使用服务名得到hostname
+      discovery:
+        locator:
+          enabled: true
